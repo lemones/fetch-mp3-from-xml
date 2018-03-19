@@ -3,7 +3,7 @@ Download mp3 from XML where url=[.mp3] is within an <enclosure> tag.
 
 ***
 
-url variable:
+### url variable
 ```python
 findAll('enclosure', url=re.compile('http.*\.mp3'))
 ```
@@ -11,7 +11,7 @@ findAll('enclosure', url=re.compile('http.*\.mp3'))
 
 ---
 
-retest variable:
+### retest variable
 ```python
 re.sub("\?.*$", "", enclosure['url'])
 ```
