@@ -6,37 +6,57 @@ import requests
 import re
 import os.path
 
-rss_xml = requests.get("https://bitsk.libsyn.com/rss")
-parse = rss_xml.text
-doc = soup(parse, 'lxml')
+# Path to save folder (remember the forward slash at end)
+folder = os.getenv("HOME") + "/Music/Podcasts/"
 
-# Get mp3 extension from url
-mp3 = doc.findAll('enclosure', url=re.compile('http.*\.mp3'))
+with open("list.txt") as fop:
 
-# Set folder name with removed special characters (respecting Swedish alphabet)
-folder = " ".join(re.findall("[a-öA-Ö]+", doc.title.string))
+    cont = fop.readlines()
+    # Remove \n in new line
+    cont = [x.strip() for x in cont]
 
-# Create folder if not exist
-if not os.path.exists(folder):
-    print("Creating folder: %s" % (folder))
-    os.makedirs(folder)
+    for line in cont:
 
-for enclosure in mp3:
-    # Remove everything after question mark in URL
-    retest = re.sub("\?.*$", "", enclosure['url'])
-    # Remove everything after last forward slash to get filename
-    filename = retest.split('/')[-1]
-    # Put it all togheter
-    full = folder + "/" + filename
+        exist = 0
+        down = 0
 
-    # If file exist:
-    if os.path.isfile(full):
-        print("[-] Skipping: %s" % (filename))
-    else:
-        print("[*] Downloading: %s -> %s" % (filename, folder))
-        try:
-            data = urllib.request.urlretrieve(retest, full)
-        except KeyboardInterrupt:
-            print("[-] Removing incomplete: %s" % (full))
-            os.remove(full)
-            exit(1)
+        rss_xml = requests.get(line)
+        parse = rss_xml.text
+        doc = soup(parse, 'lxml')
+        # Search mp3 extension
+        mp3 = doc.findAll('enclosure', url=re.compile('http.*\.mp3'))
+        # Set subfolder and remove special characters
+        subfolder = " ".join(re.findall("[a-öA-Ö]+", doc.title.string))
+        mergedfold = folder + subfolder
+
+        # Create folder if not exist
+        if not os.path.exists(mergedfold):
+            print("[*] Creating folder: %s" % (subfolder))
+            os.makedirs(mergedfold)
+
+        for enclosure in mp3:
+            # Remove everything after question mark in URL
+            retest = re.sub("\?.*$", "", enclosure['url'])
+            # Remove everything after last forward slash to get filename
+            filename = retest.split('/')[-1]
+            # Put it all togheter
+            full = mergedfold + "/" + filename
+
+            if os.path.isfile(full):
+                exist += 1
+            else:
+                print("[*] Downloading: %s -> %s" % (filename, subfolder))
+                down += 1
+                try:
+                    data = urllib.request.urlretrieve(retest, full)
+                    exist += 1
+                except KeyboardInterrupt:
+                    print("[E] Removing: %s/%s" % (subfolder, filename))
+                    os.remove(full)
+                    exit(1)
+        if down > 0:
+            print("[*] %s (%s/%s)" % (subfolder, exist, down))
+        else:
+            print("[*] %s (%s)" % (subfolder, exist))
+
+fop.close()
